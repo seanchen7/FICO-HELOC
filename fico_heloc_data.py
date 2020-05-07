@@ -280,7 +280,7 @@ print(rfc_random.best_params_) # Print results
 
 
 # Refit the model using tuned parameters
-rfc = RandomForestClassifier(n_estimators=500, max_depth=100, max_features='sqrt')
+rfc = RandomForestClassifier(n_estimators=944, max_depth=100, max_features='auto')
 rfc.fit(X_train,y_train) #fit
 rfc_predict = rfc.predict(X_test) # predictions
 rfc_cv_score = cross_val_score(rfc, X, y, cv=10, scoring='roc_auc') #scores
