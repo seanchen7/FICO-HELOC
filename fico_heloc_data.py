@@ -18,15 +18,12 @@ from IPython.display import Image
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-# Change directory
-file_path = '/Users/sean/Documents/GitHub/FICO-Challenge'
-os.chdir(file_path)
-# os. getcwd() 
+os.chdir(r"C:\Users\SeanChen\Documents\GitHub\FICO-HELOC") # Change directory
 
 #%% Import and prepare data
 
 # FICO Home Equity Line of Credit (HELOC) Dataset (https://community.fico.com/s/explainable-machine-learning-challenge)
-df = pd.read_csv(file_path + '/Data/heloc_dataset_v1.csv')
+df = pd.read_csv('./Data/heloc_dataset_v1.csv')
 df.dtypes
 
 # The target variable to predict is a binary variable called RiskPerformance. 
@@ -140,14 +137,21 @@ features_sub = list(df_corr2.iloc[1:16].index)
 # Correlation matrix for select variables
 df_corr3 = df[features_sub].corr() 
 
+### Visualize the correlations
+plt.figure(figsize=(20, 10))
+sns.heatmap(df_corr[(df_corr >= 0.3) | (df_corr <= -0.3)], 
+            cmap='viridis', vmax=1.0, vmin=-1.0, linewidths=0.1,
+            annot=True, annot_kws={"size": 8}, square=True)
+
+
 ### Output to excel
-with pd.ExcelWriter('output_data_summary.xlsx') as writer:  
-    df_summary.to_excel(writer, sheet_name='Summary_Numeric')
-    df_summary2.to_excel(writer, sheet_name='Summary_Category')
-    df_summary4.to_excel(writer, sheet_name='Summary_Group_Mean')
-    df_corr.to_excel(writer, sheet_name='Corr1')
-    df_corr2.to_excel(writer, sheet_name='Corr2')
-    df_corr3.to_excel(writer, sheet_name='Corr3')
+# with pd.ExcelWriter('output_data_summary.xlsx') as writer:  
+#     df_summary.to_excel(writer, sheet_name='Summary_Numeric')
+#     df_summary2.to_excel(writer, sheet_name='Summary_Category')
+#     df_summary4.to_excel(writer, sheet_name='Summary_Group_Mean')
+#     df_corr.to_excel(writer, sheet_name='Corr1')
+#     df_corr2.to_excel(writer, sheet_name='Corr2')
+#     df_corr3.to_excel(writer, sheet_name='Corr3')
 
 ## Other correlation methods
 # from scipy import stats
@@ -209,30 +213,6 @@ def model_summary(y_test, dtc_predict, dtc_cv_score):
     print("=== Mean AUC Score ===")
     print("Mean AUC Score - Random Forest: ", dtc_cv_score.mean())
 
-# Search for best depth parameter for decision tree model
-def tree_depth_search (X_train, X_test, y_train, y_test, criterion, depth_range):
-    dt2 = pd.DataFrame()
-    for i in depth_range:
-        
-        clf = tree.DecisionTreeClassifier(criterion=criterion, max_depth=i, random_state=66)
-        clf = clf.fit(X_train,y_train)
-        out_sample_pred = clf.predict(X_test)
-        in_sample_pred = clf.predict(X_train)
-        in_acc = sk.metrics.accuracy_score(y_train, in_sample_pred)
-        out_acc = sk.metrics.accuracy_score(y_test, out_sample_pred)
-        in_conf = sk.metrics.confusion_matrix(y_train, in_sample_pred)
-        out_conf = sk.metrics.confusion_matrix(y_test, out_sample_pred)
-        tpr_in = in_conf[1][1]/(in_conf[1][0]+in_conf[1][1])
-        tpr_out = out_conf[1][1]/(out_conf[1][0]+out_conf[1][1])
-        fpr_in = in_conf[0][1]/(in_conf[0][0]+in_conf[0][1])
-        fpr_out = out_conf[0][1]/(out_conf[0][0]+out_conf[0][1])
-        
-        dt1 = pd.DataFrame({'Depth': [i, i], 'Sample': ['In-Sample', 'Out-Sample'], 'Accuracy': [in_acc, out_acc],
-                            "TPR": [tpr_in,tpr_out], "FPR": [fpr_in, fpr_out]})
-        dt2 = pd.concat([dt2, dt1])
-   
-    return dt2
-
 
 #%% Logisitic Regressions
 
@@ -291,13 +271,37 @@ dtc_cv_score = cross_val_score(dtc, X, y, cv=10, scoring='roc_auc') #scores
 model_summary(y_test, dtc_predict, dtc_cv_score) # Model summary
 
 ## Plot the tree
-dot_data = tree.export_graphviz(dtc, feature_names=features, class_names=target_names, out_file=None, filled = True)
+dot_data = tree.export_graphviz(dtc, feature_names=features_sub, class_names=target_names, out_file=None, filled = True)
 graph = pydotplus.graph_from_dot_data(dot_data)
 Image(graph.create_png())
 # graph.write_png("tree_model1.png")
 
 
 # Model optimization
+# Search for best depth parameter for decision tree model
+def tree_depth_search (X_train, X_test, y_train, y_test, criterion, depth_range):
+    dt2 = pd.DataFrame()
+    for i in depth_range:
+        
+        clf = tree.DecisionTreeClassifier(criterion=criterion, max_depth=i, random_state=66)
+        clf = clf.fit(X_train,y_train)
+        out_sample_pred = clf.predict(X_test)
+        in_sample_pred = clf.predict(X_train)
+        in_acc = sk.metrics.accuracy_score(y_train, in_sample_pred)
+        out_acc = sk.metrics.accuracy_score(y_test, out_sample_pred)
+        in_conf = sk.metrics.confusion_matrix(y_train, in_sample_pred)
+        out_conf = sk.metrics.confusion_matrix(y_test, out_sample_pred)
+        tpr_in = in_conf[1][1]/(in_conf[1][0]+in_conf[1][1])
+        tpr_out = out_conf[1][1]/(out_conf[1][0]+out_conf[1][1])
+        fpr_in = in_conf[0][1]/(in_conf[0][0]+in_conf[0][1])
+        fpr_out = out_conf[0][1]/(out_conf[0][0]+out_conf[0][1])
+        
+        dt1 = pd.DataFrame({'Depth': [i, i], 'Sample': ['In-Sample', 'Out-Sample'], 'Accuracy': [in_acc, out_acc],
+                            "TPR": [tpr_in,tpr_out], "FPR": [fpr_in, fpr_out]})
+        dt2 = pd.concat([dt2, dt1])
+   
+    return dt2
+
 dtc_depth = tree_depth_search(X_train, X_test, y_train, y_test, criterion='entropy', depth_range=range(1, 12))
 
 ## Plot the model measures
@@ -318,7 +322,7 @@ dtc_cv_score = cross_val_score(dtc, X, y, cv=10, scoring='roc_auc') #scores
 model_summary(y_test, dtc_predict, dtc_cv_score) # Model summary
 
 ## Plot the tree
-dot_data = tree.export_graphviz(dtc, feature_names=features, class_names=target_names, out_file=None, filled = True)
+dot_data = tree.export_graphviz(dtc, feature_names=features_sub, class_names=target_names, out_file=None, filled = True)
 graph = pydotplus.graph_from_dot_data(dot_data)
 Image(graph.create_png())
 # graph.write_png("tree_model2.png")
